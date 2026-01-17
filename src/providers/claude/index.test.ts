@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Readable } from 'stream';
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as readline from 'readline';
 import claudeProvider from './index.js';
 
 // Mock dependencies
@@ -16,17 +18,25 @@ vi.mock('../../lib/format.js', () => ({
 
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
-  return {
+  const mocked = {
     ...actual,
     createReadStream: vi.fn(),
+  };
+  return {
+    ...mocked,
+    default: mocked,
   };
 });
 
 vi.mock('readline', async () => {
   const actual = await vi.importActual<typeof import('readline')>('readline');
-  return {
+  const mocked = {
     ...actual,
     createInterface: vi.fn(),
+  };
+  return {
+    ...mocked,
+    default: mocked,
   };
 });
 
@@ -57,9 +67,6 @@ describe('Claude Provider', () => {
   it('should parse Claude history and return events', async () => {
     const { pathExists } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
 
@@ -84,8 +91,8 @@ describe('Claude Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await claudeProvider.fetchEvents();
 
@@ -100,9 +107,6 @@ describe('Claude Provider', () => {
   it('should filter events by current directory', async () => {
     const { pathExists } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
 
@@ -126,8 +130,8 @@ describe('Claude Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await claudeProvider.fetchEvents();
 
@@ -138,9 +142,6 @@ describe('Claude Provider', () => {
   it('should respect limit parameter', async () => {
     const { pathExists } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
 
@@ -164,8 +165,8 @@ describe('Claude Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await claudeProvider.fetchEvents({ limit: 1 });
 
@@ -175,9 +176,6 @@ describe('Claude Provider', () => {
   it('should skip invalid JSON lines', async () => {
     const { pathExists } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
 
@@ -196,8 +194,8 @@ describe('Claude Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await claudeProvider.fetchEvents();
 
@@ -208,9 +206,6 @@ describe('Claude Provider', () => {
   it('should filter out UI echo messages', async () => {
     const { pathExists } = await import('../../lib/paths.js');
     const { toSummary, isUiEcho } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(isUiEcho).mockImplementation((text) => text.includes('Type to search'));
     vi.mocked(toSummary).mockImplementation((text) => {
@@ -238,8 +233,8 @@ describe('Claude Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await claudeProvider.fetchEvents();
 
@@ -250,9 +245,6 @@ describe('Claude Provider', () => {
   it('should include sessions from other directories when includeAll is true', async () => {
     const { pathExists } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
 
@@ -276,8 +268,8 @@ describe('Claude Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await claudeProvider.fetchEvents({ includeAll: true });
 

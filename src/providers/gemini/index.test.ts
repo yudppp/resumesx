@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import geminiProvider from './index.js';
+import * as fs from 'fs';
 
 // Mock dependencies
 vi.mock('../../lib/paths.js', () => ({
@@ -14,21 +15,26 @@ vi.mock('../../lib/format.js', () => ({
 
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
-  return {
+  const mocked = {
     ...actual,
     promises: {
       readFile: vi.fn(),
       stat: vi.fn(),
     },
   };
+  return {
+    ...mocked,
+    default: mocked,
+  };
 });
 
 describe('Gemini Provider', () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(process, 'cwd').mockReturnValue('/test/project');
-    const fs = await import('fs');
-    vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 1234567890000 } as any);
+    vi.spyOn(fs.promises, 'stat').mockResolvedValue({
+      mtimeMs: 1234567890000,
+    } as any);
   });
 
   afterEach(() => {
@@ -52,14 +58,12 @@ describe('Gemini Provider', () => {
   it('should parse Gemini chat sessions and return events', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
       { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
     ]);
-    vi.mocked(fs.promises.readFile).mockResolvedValue(
+    vi.spyOn(fs.promises, 'readFile').mockResolvedValue(
       JSON.stringify({
         sessionId: 'session-1',
         lastUpdated: '2024-01-01T00:00:00Z',
@@ -84,14 +88,12 @@ describe('Gemini Provider', () => {
   it('should use last user message if first is not available', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
       { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
     ]);
-    vi.mocked(fs.promises.readFile).mockResolvedValue(
+    vi.spyOn(fs.promises, 'readFile').mockResolvedValue(
       JSON.stringify({
         sessionId: 'session-1',
         lastUpdated: '2024-01-01T00:00:00Z',
@@ -111,8 +113,6 @@ describe('Gemini Provider', () => {
   it('should respect limit parameter', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -121,7 +121,7 @@ describe('Gemini Provider', () => {
     ]);
 
     let callCount = 0;
-    vi.mocked(fs.promises.readFile).mockImplementation(async () => {
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(async () => {
       callCount++;
       return JSON.stringify({
         sessionId: `session-${callCount}`,
@@ -138,8 +138,6 @@ describe('Gemini Provider', () => {
   it('should skip sessions with invalid JSON', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -148,7 +146,7 @@ describe('Gemini Provider', () => {
     ]);
 
     let callCount = 0;
-    vi.mocked(fs.promises.readFile).mockImplementation(async () => {
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(async () => {
       callCount++;
       if (callCount === 1) {
         return 'invalid json';
@@ -169,14 +167,12 @@ describe('Gemini Provider', () => {
   it('should skip sessions without valid timestamp', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
       { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
     ]);
-    vi.mocked(fs.promises.readFile).mockResolvedValue(
+    vi.spyOn(fs.promises, 'readFile').mockResolvedValue(
       JSON.stringify({
         sessionId: 'session-1',
         lastUpdated: 'invalid-date',
@@ -192,14 +188,12 @@ describe('Gemini Provider', () => {
   it('should skip sessions with no user messages', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockReturnValue(undefined);
     vi.mocked(readDirSafe).mockResolvedValue([
       { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
     ]);
-    vi.mocked(fs.promises.readFile).mockResolvedValue(
+    vi.spyOn(fs.promises, 'readFile').mockResolvedValue(
       JSON.stringify({
         sessionId: 'session-1',
         lastUpdated: '2024-01-01T00:00:00Z',
@@ -215,25 +209,22 @@ describe('Gemini Provider', () => {
   it('should sort events by timestamp in descending order', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
       { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
       { name: 'session2.json', isFile: () => true, isDirectory: () => false } as any,
     ]);
-    vi.mocked(fs.promises.stat).mockImplementation(async (filePath: any) => ({
+    vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath: any) => ({
       mtimeMs: String(filePath).includes('session2') ? 2000 : 1000,
     }));
 
-    let callCount = 0;
-    vi.mocked(fs.promises.readFile).mockImplementation(async () => {
-      callCount++;
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(async (filePath: any) => {
+      const isSecond = String(filePath).includes('session2');
       return JSON.stringify({
-        sessionId: `session-${callCount}`,
-        lastUpdated: callCount === 1 ? '2024-01-01T00:00:00Z' : '2024-01-02T00:00:00Z',
-        messages: [{ type: 'user', content: `Message ${callCount}` }],
+        sessionId: isSecond ? 'session-2' : 'session-1',
+        lastUpdated: isSecond ? '2024-01-02T00:00:00Z' : '2024-01-01T00:00:00Z',
+        messages: [{ type: 'user', content: isSecond ? 'Message 2' : 'Message 1' }],
       });
     });
 
@@ -246,8 +237,6 @@ describe('Gemini Provider', () => {
   it('should include sessions from all projects when includeAll is true', async () => {
     const { pathExists, readDirSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe)
@@ -263,7 +252,7 @@ describe('Gemini Provider', () => {
       ]);
 
     let callCount = 0;
-    vi.mocked(fs.promises.readFile).mockImplementation(async () => {
+    vi.spyOn(fs.promises, 'readFile').mockImplementation(async () => {
       callCount++;
       return JSON.stringify({
         sessionId: `session-${callCount}`,

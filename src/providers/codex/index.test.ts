@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
+import * as fs from 'fs';
+import * as readline from 'readline';
 import codexProvider from './index.js';
 
 // Mock dependencies
@@ -17,17 +19,25 @@ vi.mock('../../lib/format.js', () => ({
 
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
-  return {
+  const mocked = {
     ...actual,
     createReadStream: vi.fn(),
+  };
+  return {
+    ...mocked,
+    default: mocked,
   };
 });
 
 vi.mock('readline', async () => {
   const actual = await vi.importActual<typeof import('readline')>('readline');
-  return {
+  const mocked = {
     ...actual,
     createInterface: vi.fn(),
+  };
+  return {
+    ...mocked,
+    default: mocked,
   };
 });
 
@@ -58,9 +68,6 @@ describe('Codex Provider', () => {
   it('should parse Codex sessions and return events', async () => {
     const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -96,8 +103,8 @@ describe('Codex Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await codexProvider.fetchEvents();
 
@@ -112,9 +119,6 @@ describe('Codex Provider', () => {
   it('should filter events by current directory', async () => {
     const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -127,7 +131,7 @@ describe('Codex Provider', () => {
     } as any);
 
     let callCount = 0;
-    vi.mocked(readline.createInterface).mockImplementation(() => {
+    vi.spyOn(readline, 'createInterface').mockImplementation(() => {
       callCount++;
       const mockRl = new EventEmitter() as any;
       mockRl.close = vi.fn();
@@ -165,7 +169,7 @@ describe('Codex Provider', () => {
 
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
 
     const events = await codexProvider.fetchEvents();
 
@@ -176,9 +180,6 @@ describe('Codex Provider', () => {
   it('should respect limit parameter', async () => {
     const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -191,7 +192,7 @@ describe('Codex Provider', () => {
     } as any);
 
     let callCount = 0;
-    vi.mocked(readline.createInterface).mockImplementation(() => {
+    vi.spyOn(readline, 'createInterface').mockImplementation(() => {
       callCount++;
       const mockRl = new EventEmitter() as any;
       mockRl.close = vi.fn();
@@ -212,7 +213,7 @@ describe('Codex Provider', () => {
 
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
 
     const events = await codexProvider.fetchEvents({ limit: 1 });
 
@@ -222,9 +223,6 @@ describe('Codex Provider', () => {
   it('should handle multiple user messages in a session', async () => {
     const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -263,8 +261,8 @@ describe('Codex Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await codexProvider.fetchEvents();
 
@@ -276,9 +274,6 @@ describe('Codex Provider', () => {
   it('should skip invalid JSON lines', async () => {
     const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -308,8 +303,8 @@ describe('Codex Provider', () => {
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
 
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
+    vi.spyOn(readline, 'createInterface').mockReturnValue(mockRl as any);
 
     const events = await codexProvider.fetchEvents();
 
@@ -320,9 +315,6 @@ describe('Codex Provider', () => {
   it('should include sessions from other directories when includeAll is true', async () => {
     const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
     const { toSummary } = await import('../../lib/format.js');
-    const fs = await import('fs');
-    const readline = await import('readline');
-
     vi.mocked(pathExists).mockResolvedValue(true);
     vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
     vi.mocked(readDirSafe).mockResolvedValue([
@@ -335,7 +327,7 @@ describe('Codex Provider', () => {
     } as any);
 
     let callCount = 0;
-    vi.mocked(readline.createInterface).mockImplementation(() => {
+    vi.spyOn(readline, 'createInterface').mockImplementation(() => {
       callCount++;
       const mockRl = new EventEmitter() as any;
       mockRl.close = vi.fn();
@@ -373,7 +365,7 @@ describe('Codex Provider', () => {
 
     const mockStream = new EventEmitter() as any;
     mockStream.close = vi.fn();
-    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
+    vi.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as any);
 
     const events = await codexProvider.fetchEvents({ includeAll: true });
 
