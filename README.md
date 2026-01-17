@@ -2,6 +2,8 @@
 
 A terminal picker that helps you resume the most recent Codex CLI, Claude Code, or Gemini CLI session for the current working directory.
 
+![Demo](demo.gif)
+
 ## Installation
 
 ### From npm
