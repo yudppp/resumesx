@@ -1,0 +1,49 @@
+{
+  "name": "resumesx",
+  "version": "0.1.0",
+  "description": "Resume the last used AI CLI tool",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "resumesx": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc && esbuild src/cli.tsx --bundle --platform=node --format=esm --outfile=dist/cli.js --external:ink --external:react --external:meow",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "cli",
+    "resume",
+    "ink",
+    "agent"
+  ],
+  "author": "yudppp",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.4",
+    "@types/react": "^19.1.8",
+    "@vitest/ui": "^4.0.17",
+    "esbuild": "^0.25.5",
+    "prettier": "^3.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^4.0.17"
+  },
+  "dependencies": {
+    "ink": "^6.0.1",
+    "meow": "^13.2.0",
+    "react": "^19.1.0",
+    "string-width": "^7.2.0"
+  }
+}
