@@ -167,7 +167,7 @@ describe('Claude Provider', () => {
     vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
     vi.mocked(readline.createInterface).mockReturnValue(mockRl);
 
-    const events = await claudeProvider.fetchEvents(1);
+    const events = await claudeProvider.fetchEvents({ limit: 1 });
 
     expect(events.length).toBeLessThanOrEqual(1);
   });
@@ -245,5 +245,42 @@ describe('Claude Provider', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]?.summary).toBe('Real user message');
+  });
+
+  it('should include sessions from other directories when includeAll is true', async () => {
+    const { pathExists } = await import('../../lib/paths.js');
+    const { toSummary } = await import('../../lib/format.js');
+    const fs = await import('fs');
+    const readline = await import('readline');
+
+    vi.mocked(pathExists).mockResolvedValue(true);
+    vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
+
+    const mockRl = new EventEmitter() as any;
+    mockRl.close = vi.fn();
+    mockRl[Symbol.asyncIterator] = async function* () {
+      yield JSON.stringify({
+        timestamp: 1234567890000,
+        display: 'First message',
+        sessionId: 'session-1',
+        project: '/test/project',
+      });
+      yield JSON.stringify({
+        timestamp: 1234567900000,
+        display: 'Different project',
+        sessionId: 'session-2',
+        project: '/other/project',
+      });
+    };
+
+    const mockStream = new EventEmitter() as any;
+    mockStream.close = vi.fn();
+
+    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
+    vi.mocked(readline.createInterface).mockReturnValue(mockRl);
+
+    const events = await claudeProvider.fetchEvents({ includeAll: true });
+
+    expect(events).toHaveLength(2);
   });
 });

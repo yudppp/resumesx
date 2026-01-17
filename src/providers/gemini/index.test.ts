@@ -18,14 +18,17 @@ vi.mock('fs', async () => {
     ...actual,
     promises: {
       readFile: vi.fn(),
+      stat: vi.fn(),
     },
   };
 });
 
 describe('Gemini Provider', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.spyOn(process, 'cwd').mockReturnValue('/test/project');
+    const fs = await import('fs');
+    vi.mocked(fs.promises.stat).mockResolvedValue({ mtimeMs: 1234567890000 } as any);
   });
 
   afterEach(() => {
@@ -127,7 +130,7 @@ describe('Gemini Provider', () => {
       });
     });
 
-    const events = await geminiProvider.fetchEvents(1);
+    const events = await geminiProvider.fetchEvents({ limit: 1 });
 
     expect(events.length).toBeLessThanOrEqual(1);
   });
@@ -220,6 +223,9 @@ describe('Gemini Provider', () => {
       { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
       { name: 'session2.json', isFile: () => true, isDirectory: () => false } as any,
     ]);
+    vi.mocked(fs.promises.stat).mockImplementation(async (filePath: any) => ({
+      mtimeMs: String(filePath).includes('session2') ? 2000 : 1000,
+    }));
 
     let callCount = 0;
     vi.mocked(fs.promises.readFile).mockImplementation(async () => {
@@ -235,5 +241,39 @@ describe('Gemini Provider', () => {
 
     expect(events).toHaveLength(2);
     expect(events[0]?.occurredAt.getTime()).toBeGreaterThan(events[1]?.occurredAt.getTime() ?? 0);
+  });
+
+  it('should include sessions from all projects when includeAll is true', async () => {
+    const { pathExists, readDirSafe } = await import('../../lib/paths.js');
+    const { toSummary } = await import('../../lib/format.js');
+    const fs = await import('fs');
+
+    vi.mocked(pathExists).mockResolvedValue(true);
+    vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
+    vi.mocked(readDirSafe)
+      .mockResolvedValueOnce([
+        { name: 'project-a', isFile: () => false, isDirectory: () => true } as any,
+        { name: 'project-b', isFile: () => false, isDirectory: () => true } as any,
+      ])
+      .mockResolvedValueOnce([
+        { name: 'session1.json', isFile: () => true, isDirectory: () => false } as any,
+      ])
+      .mockResolvedValueOnce([
+        { name: 'session2.json', isFile: () => true, isDirectory: () => false } as any,
+      ]);
+
+    let callCount = 0;
+    vi.mocked(fs.promises.readFile).mockImplementation(async () => {
+      callCount++;
+      return JSON.stringify({
+        sessionId: `session-${callCount}`,
+        lastUpdated: `2024-01-0${callCount}T00:00:00Z`,
+        messages: [{ type: 'user', content: `Message ${callCount}` }],
+      });
+    });
+
+    const events = await geminiProvider.fetchEvents({ includeAll: true });
+
+    expect(events).toHaveLength(2);
   });
 });

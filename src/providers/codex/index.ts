@@ -139,13 +139,14 @@ const readSessionSummary = async (filePath: string): Promise<SessionSummary> => 
 const codexProvider: ToolProvider = {
   id: 'codex',
   label: 'Codex CLI',
-  fetchEvents: async (limit?: number): Promise<ToolEvent[]> => {
+  fetchEvents: async (options): Promise<ToolEvent[]> => {
     const sessionsRoot = resolveHome('~/.codex/sessions');
     if (!(await pathExists(sessionsRoot))) {
       return [];
     }
 
     const cwd = process.cwd();
+    const { limit, includeAll } = options ?? {};
     // Default to 50 most recent items for better performance
     const effectiveLimit = limit ?? 50;
 
@@ -170,12 +171,14 @@ const codexProvider: ToolProvider = {
         continue;
       }
 
-      const matchesCwd =
-        summary.sessionCwd === cwd ||
-        cwd.startsWith(`${summary.sessionCwd}${path.sep}`) ||
-        summary.sessionCwd.startsWith(`${cwd}${path.sep}`);
-      if (!matchesCwd) {
-        continue;
+      if (!includeAll) {
+        const matchesCwd =
+          summary.sessionCwd === cwd ||
+          cwd.startsWith(`${summary.sessionCwd}${path.sep}`) ||
+          summary.sessionCwd.startsWith(`${cwd}${path.sep}`);
+        if (!matchesCwd) {
+          continue;
+        }
       }
 
       const occurredAt = new Date(summary.lastTimestamp);

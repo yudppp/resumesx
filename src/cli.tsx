@@ -16,6 +16,7 @@ const cli = meow(
 	Options
 	  --last, -l     Resume the most recent tool without UI
 	  --limit, -n    Number of events to load
+	  --all, -a      Include sessions from other directories
 	  --help, -h     Show help
 	  --version, -v  Show version
 
@@ -30,6 +31,7 @@ const cli = meow(
     flags: {
       limit: { type: 'number', shortFlag: 'n' },
       last: { type: 'boolean', shortFlag: 'l' },
+      all: { type: 'boolean', shortFlag: 'a' },
       help: { type: 'boolean', shortFlag: 'h' },
       version: { type: 'boolean', shortFlag: 'v' },
     },
@@ -53,7 +55,10 @@ const main = async () => {
     typeof rawLimit === 'number' && Number.isFinite(rawLimit) && rawLimit > 0
       ? rawLimit
       : undefined;
-  const { events, latest } = await scanProviders(providers, limit);
+  const { events, latest } = await scanProviders(providers, {
+    limit,
+    includeAll: cli.flags.all ?? false,
+  });
 
   if (cli.flags.last) {
     if (!latest) {

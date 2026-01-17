@@ -1,16 +1,17 @@
-import { ToolProvider, ScanResult, ToolEvent } from '../types.js';
+import { ToolProvider, ScanResult, ToolEvent, ScanOptions } from '../types.js';
 
 export const sortByTime = (events: ToolEvent[]) =>
   [...events].sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime());
 
 export const scanProviders = async (
   providers: ToolProvider[],
-  limit?: number,
+  options?: ScanOptions,
 ): Promise<ScanResult> => {
+  const { limit } = options ?? {};
   const results = await Promise.all(
     providers.map(async (provider) => {
       try {
-        return await provider.fetchEvents(limit);
+        return await provider.fetchEvents(options);
       } catch {
         return [] as ToolEvent[];
       }

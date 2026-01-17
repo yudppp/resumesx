@@ -37,13 +37,14 @@ const isValidClaudeRecord = (obj: unknown): obj is ClaudeHistoryRecord => {
 const claudeProvider: ToolProvider = {
   id: 'claude',
   label: 'Claude Code',
-  fetchEvents: async (limit?: number): Promise<ToolEvent[]> => {
+  fetchEvents: async (options): Promise<ToolEvent[]> => {
     const historyPath = resolveHome('~/.claude/history.jsonl');
     if (!(await pathExists(historyPath))) {
       return [];
     }
 
     const cwd = process.cwd();
+    const { limit, includeAll } = options ?? {};
     const sessions = new Map<string, SessionData>();
     const stream = fs.createReadStream(historyPath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -70,12 +71,14 @@ const claudeProvider: ToolProvider = {
           continue;
         }
 
-        const matchesProject =
-          parsed.project === cwd ||
-          cwd.startsWith(`${parsed.project}${path.sep}`) ||
-          parsed.project.startsWith(`${cwd}${path.sep}`);
-        if (!matchesProject) {
-          continue;
+        if (!includeAll) {
+          const matchesProject =
+            parsed.project === cwd ||
+            cwd.startsWith(`${parsed.project}${path.sep}`) ||
+            parsed.project.startsWith(`${cwd}${path.sep}`);
+          if (!matchesProject) {
+            continue;
+          }
         }
 
         const summary =

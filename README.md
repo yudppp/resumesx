@@ -36,6 +36,9 @@ resumesx --last
 # Limit how many sessions are loaded (default: 50)
 resumesx --limit 10
 resumesx -n 50
+
+# Include sessions from other directories
+resumesx --all
 ```
 
 ### Features
@@ -43,7 +46,7 @@ resumesx -n 50
 #### Smart Session Detection
 
 - **Multi-Tool Support**: Automatically detects sessions from Codex CLI, Claude Code, and Gemini CLI
-- **Directory-Aware**: Filters sessions to the current directory and its subdirectories
+- **Directory-Aware**: Filters sessions to the current directory and its subdirectories (use `--all` to include everything)
 - **Performance Optimized**: Loads only the most recent 50 sessions by default for instant startup
 
 #### Enhanced User Experience

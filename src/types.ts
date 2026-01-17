@@ -21,7 +21,12 @@ export type ToolEvent = {
 export type ToolProvider = {
   id: string;
   label: string;
-  fetchEvents: (limit?: number) => Promise<ToolEvent[]>;
+  fetchEvents: (options?: ScanOptions) => Promise<ToolEvent[]>;
+};
+
+export type ScanOptions = {
+  limit?: number;
+  includeAll?: boolean;
 };
 
 export type ScanResult = {

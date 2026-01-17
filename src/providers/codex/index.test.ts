@@ -214,7 +214,7 @@ describe('Codex Provider', () => {
     mockStream.close = vi.fn();
     vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
 
-    const events = await codexProvider.fetchEvents(1);
+    const events = await codexProvider.fetchEvents({ limit: 1 });
 
     expect(events.length).toBeLessThanOrEqual(1);
   });
@@ -315,5 +315,68 @@ describe('Codex Provider', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]?.summary).toBe('Valid message');
+  });
+
+  it('should include sessions from other directories when includeAll is true', async () => {
+    const { pathExists, readDirSafe, statSafe } = await import('../../lib/paths.js');
+    const { toSummary } = await import('../../lib/format.js');
+    const fs = await import('fs');
+    const readline = await import('readline');
+
+    vi.mocked(pathExists).mockResolvedValue(true);
+    vi.mocked(toSummary).mockImplementation((text) => text?.substring(0, 120));
+    vi.mocked(readDirSafe).mockResolvedValue([
+      { name: 'session1.jsonl', isFile: () => true, isDirectory: () => false } as any,
+      { name: 'session2.jsonl', isFile: () => true, isDirectory: () => false } as any,
+    ]);
+    vi.mocked(statSafe).mockResolvedValue({
+      mtimeMs: 1234567890000,
+      isFile: () => true,
+    } as any);
+
+    let callCount = 0;
+    vi.mocked(readline.createInterface).mockImplementation(() => {
+      callCount++;
+      const mockRl = new EventEmitter() as any;
+      mockRl.close = vi.fn();
+
+      if (callCount === 1) {
+        mockRl[Symbol.asyncIterator] = async function* () {
+          yield JSON.stringify({
+            type: 'session_meta',
+            timestamp: '2024-01-01T00:00:00Z',
+            payload: { id: 'session-1', cwd: '/test/project' },
+          });
+          yield JSON.stringify({
+            type: 'event_msg',
+            timestamp: '2024-01-01T00:01:00Z',
+            payload: { type: 'user_message', message: 'Project message' },
+          });
+        };
+      } else {
+        mockRl[Symbol.asyncIterator] = async function* () {
+          yield JSON.stringify({
+            type: 'session_meta',
+            timestamp: '2024-01-01T00:00:00Z',
+            payload: { id: 'session-2', cwd: '/other/project' },
+          });
+          yield JSON.stringify({
+            type: 'event_msg',
+            timestamp: '2024-01-01T00:01:00Z',
+            payload: { type: 'user_message', message: 'Other message' },
+          });
+        };
+      }
+
+      return mockRl;
+    });
+
+    const mockStream = new EventEmitter() as any;
+    mockStream.close = vi.fn();
+    vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
+
+    const events = await codexProvider.fetchEvents({ includeAll: true });
+
+    expect(events).toHaveLength(2);
   });
 });
